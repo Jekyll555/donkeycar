@@ -3,6 +3,7 @@ import os
 import time
 import gym
 import gym_donkeycar
+import json
 
 def is_exe(fpath):
     return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
@@ -26,7 +27,8 @@ class DonkeyGymEnv(object):
         self.frame = self.env.reset()
         self.action = [0.0, 0.0]
         self.running = True
-        self.info = { 'pos' : (0., 0., 0.)}
+        self.info = { 'pos' : (0., 0., 0.), 'cte' : 0.,
+                'speed' : 0., 'hit' : False}
         self.delay = float(delay)
 
         if "body_style" in conf:
@@ -45,7 +47,14 @@ class DonkeyGymEnv(object):
         if self.delay > 0.0:
             time.sleep(self.delay / 1000.0)
         self.action = [steering, throttle]
-        return self.frame
+        info_dict = json.loads(json.dumps(self.info))
+        return self.frame,  \
+            info_dict['pos'][0], \
+            info_dict['pos'][1], \
+            info_dict['pos'][2], \
+            info_dict['cte'], \
+            info_dict['speed'],  \
+            info_dict['hit']
 
     def shutdown(self):
         self.running = False

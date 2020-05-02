@@ -103,12 +103,15 @@ def drive(cfg, model_path=None, use_joystick=False, model_type=None, camera_type
             from donkeycar.parts.dgym import DonkeyGymEnv
 
         inputs = []
+        outputs = ['cam/image_array']
         threaded = True
         if cfg.DONKEY_GYM:
             from donkeycar.parts.dgym import DonkeyGymEnv 
             cam = DonkeyGymEnv(cfg.DONKEY_SIM_PATH, host=cfg.SIM_HOST, env_name=cfg.DONKEY_GYM_ENV_NAME, conf=cfg.GYM_CONF, delay=cfg.SIM_ARTIFICIAL_LATENCY)
             threaded = True
             inputs = ['angle', 'throttle']
+            outputs +=  ['sim/pos_X', 'sim/pos_Y', 'sim/pos_Z', 
+                           'sim/cte', 'sim/speed', 'sim/hit']
         elif cfg.CAMERA_TYPE == "PICAM":
             from donkeycar.parts.camera import PiCamera
             cam = PiCamera(image_w=cfg.IMAGE_W, image_h=cfg.IMAGE_H, image_d=cfg.IMAGE_DEPTH, framerate=cfg.CAMERA_FRAMERATE, vflip=cfg.CAMERA_VFLIP, hflip=cfg.CAMERA_HFLIP)
@@ -133,7 +136,7 @@ def drive(cfg, model_path=None, use_joystick=False, model_type=None, camera_type
         else:
             raise(Exception("Unkown camera type: %s" % cfg.CAMERA_TYPE))
 
-        V.add(cam, inputs=inputs, outputs=['cam/image_array'], threaded=threaded)
+        V.add(cam, inputs=inputs, outputs=outputs, threaded=threaded)
 
     if use_joystick or cfg.USE_JOYSTICK_AS_DEFAULT:
         #modify max_throttle closer to 1.0 to have more power
@@ -594,6 +597,12 @@ def drive(cfg, model_path=None, use_joystick=False, model_type=None, camera_type
         inputs += ['pilot/angle', 'pilot/throttle']
         types += ['float', 'float']
 
+    if cfg.DONKEY_GYM:
+        inputs += ['sim/pos_X', 'sim/pos_Y', 'sim/pos_Z', 
+            'sim/cte', 'sim/speed', 'sim/hit']
+        types += ['float','float','float',
+            'float','float', 'str']
+    
     th = TubHandler(path=cfg.DATA_PATH)
     tub = th.new_tub_writer(inputs=inputs, types=types, user_meta=meta)
     V.add(tub, inputs=inputs, outputs=["tub/num_records"], run_condition='recording')
